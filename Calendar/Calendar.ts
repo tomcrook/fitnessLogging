@@ -10,11 +10,15 @@ class FitnessCalendar {
     // If undefined, the user has never logged their weight before
     private currentWeight : number;
 
-    constructor(goalWeight : number, goalEndDate : Date,  fitnessCalendar : FitnessDay[] = []) {
+    constructor(goalWeight : number, goalEndDate : Date, currentWeight: number = undefined,  fitnessCalendar : FitnessDay[] = []) {
         this.fitnessCalendar = fitnessCalendar;
         this.goalWeight = goalWeight;
-        this.currentWeight = this.findCurrentWeight()
+        this.currentWeight = currentWeight;
+        if (currentWeight == undefined) {
+            this.currentWeight = this.findCurrentWeight()
+        }
         this.goalEndDate = goalEndDate;
+        this.populateNextWeek();
     }
 
     /** Returns most recent logged weight, undefined if never logged **/
@@ -43,16 +47,34 @@ class FitnessCalendar {
 
     daysLeftForGoal() {
         let today = new Date();
-        return this.goalEndDate.getDate() - today.getDate();
+        let diff = Math.abs(this.goalEndDate.getTime() - today.getTime());
+        return Math.ceil(diff / (1000 * 3600 * 24));
     }
 
     getCalorieNeeds() {
         if (this.currentWeight == undefined) {
-            return this.calculateBMR(this.goalWeight)
+            return Math.ceil(this.calculateBMR(this.goalWeight))
         }
         let poundsNeeded = this.goalWeight - this.currentWeight;
         let calorie_delta = (poundsNeeded * this.caloriesPerPound) / this.daysLeftForGoal()
-        return this.calculateBMR(this.currentWeight) + calorie_delta;
+        return Math.ceil(this.calculateBMR(this.currentWeight) + calorie_delta);
+    }
+
+    getNextWeek() {
+        let dates = []
+        for (let i = 0; i < 8; i++) {
+            dates.push(this.getFutureDate(i))
+        }
+        return dates;
+    }
+
+    hasBeenPopulated(date : Date) {
+        this.fitnessCalendar.reverse().forEach(function (day) {
+            if (day.getDate().toDateString() == date.toDateString()) {
+                return true;
+            }
+        })
+        return false;
     }
 
     populateNextWeek() {
@@ -60,6 +82,15 @@ class FitnessCalendar {
         if (this.fitnessCalendar.length > 0 && this.getMostRecentDay().getDate() >= this.getFutureDate(7)) {
             return;
         }
-
+        let self = this;
+        this.getNextWeek().forEach(function(date) {
+            if (!self.hasBeenPopulated(date)) {
+                self.fitnessCalendar.push(new FitnessDay(self.getCalorieNeeds(), self.currentWeight, date))
+            }
+        })
     }
 }
+
+
+let calendar = new FitnessCalendar(190, new Date('2023-01-25'), 190);
+console.log(calendar.getMostRecentDay())
