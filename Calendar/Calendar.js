@@ -3,35 +3,55 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var FitnessDay_1 = require("./FitnessDay");
 /** Responsible for dynamically updating FitnessDays. **/
 var FitnessCalendar = /** @class */ (function () {
-    function FitnessCalendar(goalWeight, goalEndDate, currentWeight, fitnessCalendar) {
-        if (currentWeight === void 0) { currentWeight = undefined; }
-        if (fitnessCalendar === void 0) { fitnessCalendar = []; }
+    function FitnessCalendar(goalWeight, goalEndDate, fitnessCalendar) {
         this.caloriesPerPound = 3500;
         this.fitnessCalendar = fitnessCalendar;
         this.goalWeight = goalWeight;
-        this.currentWeight = currentWeight;
-        if (currentWeight == undefined) {
-            this.currentWeight = this.findCurrentWeight();
-        }
+        this.currentWeight = this.findCurrentWeight();
         this.goalEndDate = goalEndDate;
         this.populateNextWeek();
     }
+    FitnessCalendar.prototype.sortCalendar = function () {
+        this.fitnessCalendar.sort(function (a, b) { return (a.getDate() > b.getDate()) ? 1 : -1; });
+    };
     /** Returns most recent logged weight, undefined if never logged **/
     FitnessCalendar.prototype.findCurrentWeight = function () {
-        this.fitnessCalendar.reverse().forEach(function (day) {
+        this.sortCalendar();
+        // Prioritize today's weight
+        try {
+            var day = this.getFitnessDayFromDate(new Date());
             if (day.getCurrentWeight() != undefined) {
                 return day.getCurrentWeight();
             }
-        });
-        return undefined;
+        }
+        catch (_a) { }
+        var weight = undefined;
+        for (var i in this.fitnessCalendar) {
+            var day = this.fitnessCalendar[i];
+            // only want to return the weight if it is from the past
+            if (day.getCurrentWeight() != undefined && day.getDate() < new Date()) {
+                weight = day.getCurrentWeight();
+            }
+        }
+        return weight;
     };
-    FitnessCalendar.prototype.getMostRecentDay = function () {
-        return this.fitnessCalendar[this.fitnessCalendar.length - 1];
+    FitnessCalendar.prototype.getFitnessDayFromDate = function (date) {
+        for (var i in this.fitnessCalendar) {
+            var day = this.fitnessCalendar[i];
+            if (day.getDate().toDateString() == date.toDateString()) {
+                return day;
+            }
+        }
+        throw ReferenceError('Date doesn\'t exist');
     };
-    FitnessCalendar.prototype.getFutureDate = function (numberDays) {
-        var date = new Date();
-        date.setDate(new Date().getDate() + numberDays);
-        return date;
+    FitnessCalendar.prototype.getCalendar = function () {
+        return this.fitnessCalendar;
+    };
+    FitnessCalendar.prototype.setCurrentWeight = function (weight) {
+        this.currentWeight = weight;
+    };
+    FitnessCalendar.prototype.getCurrentWeight = function () {
+        return this.currentWeight;
     };
     FitnessCalendar.prototype.calculateBMR = function (weight) {
         return weight * 15;
@@ -49,35 +69,67 @@ var FitnessCalendar = /** @class */ (function () {
         var calorie_delta = (poundsNeeded * this.caloriesPerPound) / this.daysLeftForGoal();
         return Math.ceil(this.calculateBMR(this.currentWeight) + calorie_delta);
     };
+    FitnessCalendar.prototype.getDate = function (numberDays) {
+        return new Date(new Date().getTime() + numberDays * (24 * 60 * 60 * 1000));
+    };
     FitnessCalendar.prototype.getNextWeek = function () {
         var dates = [];
         for (var i = 0; i < 8; i++) {
-            dates.push(this.getFutureDate(i));
+            dates.push(this.getDate(i));
         }
         return dates;
     };
     FitnessCalendar.prototype.hasBeenPopulated = function (date) {
-        this.fitnessCalendar.reverse().forEach(function (day) {
+        for (var i in this.fitnessCalendar) {
+            var day = this.fitnessCalendar[i];
             if (day.getDate().toDateString() == date.toDateString()) {
                 return true;
             }
-        });
+        }
         return false;
     };
     FitnessCalendar.prototype.populateNextWeek = function () {
-        // Don't need to populate the week if it has already been populated.
-        if (this.fitnessCalendar.length > 0 && this.getMostRecentDay().getDate() >= this.getFutureDate(7)) {
-            return;
-        }
         var self = this;
         this.getNextWeek().forEach(function (date) {
             if (!self.hasBeenPopulated(date)) {
-                self.fitnessCalendar.push(new FitnessDay_1.default(self.getCalorieNeeds(), self.currentWeight, date));
+                self.fitnessCalendar.push(new FitnessDay_1.default(self.getCalorieNeeds(), undefined, date));
             }
         });
+        this.sortCalendar();
+    };
+    FitnessCalendar.prototype.logWeight = function (weight, date) {
+        if (date === void 0) { date = new Date(); }
+        for (var i in this.fitnessCalendar) {
+            var day = this.fitnessCalendar[i];
+            if (day.getDate().toDateString() == date.toDateString()) {
+                day.setCurrentWeight(weight);
+            }
+            ;
+        }
+        this.setCurrentWeight(this.findCurrentWeight());
+    };
+    FitnessCalendar.prototype.addCalories = function (calories, date) {
+        if (date === void 0) { date = new Date(); }
+        var day = this.getFitnessDayFromDate(date);
+        day.addCalories(calories);
+    };
+    /**
+     * Gets the change in weight from the most recently logged weight
+     * to the least recently logged weight (within numberOfDays).
+     * **/
+    FitnessCalendar.prototype.getWeightFluctuation = function (numberOfDays) {
+        if (numberOfDays === void 0) { numberOfDays = 7; }
+        var weights = [];
+        for (var i = 0; i <= numberOfDays; i++) {
+            try {
+                var day = this.getFitnessDayFromDate(this.getDate(-1 * i));
+                weights.push(day.getCurrentWeight());
+            }
+            catch (_a) { }
+        }
+        return weights[0] - weights[weights.length - 1];
     };
     return FitnessCalendar;
 }());
-var calendar = new FitnessCalendar(190, new Date('2023-01-25'), 190);
-console.log(calendar.getMostRecentDay());
+exports.default = FitnessCalendar;
 //# sourceMappingURL=Calendar.js.map
