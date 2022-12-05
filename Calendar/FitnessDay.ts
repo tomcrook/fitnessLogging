@@ -21,6 +21,10 @@ class FitnessDay {
         this.currentWeight = weight;
     }
 
+    setCalorieGoal(calories : number) {
+        this.calorieGoal = calories;
+    }
+
     getDate() {
         return this.date;
     }

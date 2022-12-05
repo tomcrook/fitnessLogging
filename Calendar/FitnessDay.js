@@ -14,6 +14,9 @@ var FitnessDay = /** @class */ (function () {
     FitnessDay.prototype.setCurrentWeight = function (weight) {
         this.currentWeight = weight;
     };
+    FitnessDay.prototype.setCalorieGoal = function (calories) {
+        this.calorieGoal = calories;
+    };
     FitnessDay.prototype.getDate = function () {
         return this.date;
     };

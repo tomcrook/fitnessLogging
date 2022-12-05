@@ -1,17 +1,18 @@
 import FitnessDay from "./FitnessDay";
 
+
+const caloriesPerPound = 3500;
 /** Responsible for dynamically updating FitnessDays. **/
 class FitnessCalendar {
-    private fitnessCalendar : FitnessDay[];
+    private calendar : FitnessDay[];
     private goalWeight : number;
     private goalEndDate : Date;
-    private caloriesPerPound : number = 3500;
 
     // If undefined, the user has never logged their weight before
     private currentWeight : number;
 
     constructor(goalWeight : number, goalEndDate : Date,  fitnessCalendar : FitnessDay[]) {
-        this.fitnessCalendar = fitnessCalendar;
+        this.calendar = fitnessCalendar;
         this.goalWeight = goalWeight;
         this.currentWeight = this.findCurrentWeight();
         this.goalEndDate = goalEndDate;
@@ -19,7 +20,7 @@ class FitnessCalendar {
     }
 
     private sortCalendar() {
-        this.fitnessCalendar.sort((a, b) => (a.getDate() > b.getDate()) ? 1 : -1)
+        this.calendar.sort((a, b) => (a.getDate() > b.getDate()) ? 1 : -1)
     }
 
     /** Returns most recent logged weight, undefined if never logged **/
@@ -35,8 +36,8 @@ class FitnessCalendar {
         } catch { }
 
         let weight = undefined;
-        for (let i in this.fitnessCalendar) {
-            let day = this.fitnessCalendar[i];
+        for (let i in this.calendar) {
+            let day = this.calendar[i];
             // only want to return the weight if it is from the past
             if (day.getCurrentWeight() != undefined && day.getDate() < new Date()) {
                 weight = day.getCurrentWeight();
@@ -46,8 +47,8 @@ class FitnessCalendar {
     }
 
     getFitnessDayFromDate(date : Date) {
-        for (let i in this.fitnessCalendar) {
-            let day = this.fitnessCalendar[i];
+        for (let i in this.calendar) {
+            let day = this.calendar[i];
             if (day.getDate().toDateString() == date.toDateString()) {
                 return day;
             }
@@ -56,9 +57,9 @@ class FitnessCalendar {
     }
 
     getCalendar() {
-        return this.fitnessCalendar;
+        return this.calendar;
     }
-
+    
     setCurrentWeight(weight : number) {
         this.currentWeight = weight;
     }
@@ -82,7 +83,7 @@ class FitnessCalendar {
             return Math.ceil(this.calculateBMR(this.goalWeight))
         }
         let poundsNeeded = this.goalWeight - this.currentWeight;
-        let calorie_delta = (poundsNeeded * this.caloriesPerPound) / this.daysLeftForGoal()
+        let calorie_delta = (poundsNeeded * caloriesPerPound) / this.daysLeftForGoal()
         return Math.ceil(this.calculateBMR(this.currentWeight) + calorie_delta);
     }
 
@@ -99,8 +100,8 @@ class FitnessCalendar {
     }
 
     private hasBeenPopulated(date : Date) {
-        for (let i in this.fitnessCalendar) {
-            let day = this.fitnessCalendar[i];
+        for (let i in this.calendar) {
+            let day = this.calendar[i];
             if (day.getDate().toDateString() == date.toDateString()) {
                 return true;
             }
@@ -112,20 +113,30 @@ class FitnessCalendar {
         let self = this;
         this.getNextWeek().forEach(function(date) {
             if (!self.hasBeenPopulated(date)) {
-                self.fitnessCalendar.push(new FitnessDay(self.getCalorieNeeds(), undefined, date))
+                self.calendar.push(new FitnessDay(self.getCalorieNeeds(), undefined, date))
             }
         });
         this.sortCalendar();
     }
 
+    private repopulateNextWeek() {
+        let self = this;
+        this.getNextWeek().forEach(function(date) {
+            let day = self.getFitnessDayFromDate(date);
+            day.setCalorieGoal(self.getCalorieNeeds());
+        });
+        this.sortCalendar();
+    }
+
     logWeight(weight : number, date : Date = new Date()) {
-        for (let i in this.fitnessCalendar) {
-            let day = this.fitnessCalendar[i];
+        for (let i in this.calendar) {
+            let day = this.calendar[i];
             if (day.getDate().toDateString() == date.toDateString()) {
                 day.setCurrentWeight(weight);
             };
         }
         this.setCurrentWeight(this.findCurrentWeight());
+        this.repopulateNextWeek();
     }
 
     addCalories(calories: number, date : Date = new Date()) {
