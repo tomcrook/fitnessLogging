@@ -5,6 +5,7 @@ import FitnessDay from "./FitnessDay";
 class User {
     username : string;
     fitnessCalendar : FitnessCalendar;
+
     constructor(username : string, fitnessCalendar : FitnessCalendar) {
         this.username = username;
         this.fitnessCalendar = fitnessCalendar;
@@ -17,6 +18,8 @@ class User {
     getFitnessCalendar() {
         return this.fitnessCalendar;
     }
+
 }
+
 
 export default User;

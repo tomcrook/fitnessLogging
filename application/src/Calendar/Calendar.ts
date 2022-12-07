@@ -5,17 +5,22 @@ const caloriesPerPound = 3500;
 /** Responsible for dynamically updating FitnessDays. **/
 class FitnessCalendar {
     private calendar : FitnessDay[];
-    private goalWeight : number;
-    private goalEndDate : Date;
 
+    // represents the number of pounds a user desires to weigh
+    private goalWeight : number;
+    // represents the date the user wants to reach their goal weight
+    private goalEndDate : Date;
+    // workoutData represents a maps from exerciseID's to an integer 'max' and integer 'mostRecent'
+    private workoutData : {};
     // If undefined, the user has never logged their weight before
     private currentWeight : number;
 
-    constructor(goalWeight : number, goalEndDate : Date,  fitnessCalendar : FitnessDay[]) {
+    constructor(goalWeight : number, goalEndDate : Date,  fitnessCalendar : FitnessDay[],  workoutData = {}) {
         this.calendar = fitnessCalendar;
         this.goalWeight = goalWeight;
         this.currentWeight = this.findCurrentWeight();
         this.goalEndDate = goalEndDate;
+        this.workoutData = workoutData;
         this.populateNextWeek();
     }
 
@@ -50,6 +55,17 @@ class FitnessCalendar {
         return date.toLocaleDateString('en-US', {timeZone: tz})
     }
 
+    setGoalWeight(weight : number) {
+        this.goalWeight = weight;
+    }
+
+    setGoalDate(date : Date) {
+        this.goalEndDate = date;
+    }
+
+    getWorkoutData() {
+        return this.workoutData;
+    }
 
     getFitnessDayFromDate(date : Date) {
         for (let i in this.calendar) {
@@ -64,23 +80,60 @@ class FitnessCalendar {
     getCalendar() {
         return this.calendar;
     }
-    
-    setCurrentWeight(weight : number) {
-        this.currentWeight = weight;
+
+    getDate(numberDays : number) {
+        let today = new Date();
+        today.setHours(0, 0, 0, 0)
+        return new Date(today.getTime() + numberDays * (24 * 60 * 60 * 1000));
     }
 
     getCurrentWeight() {
         return this.currentWeight;
     }
 
-    calculateBMR(weight: number) {
-        return weight * 15;
+    setCurrentWeight(weight : number) {
+        this.currentWeight = weight;
     }
 
     daysLeftForGoal() {
         let today = new Date();
         let diff = Math.abs(this.goalEndDate.getTime() - today.getTime());
         return Math.ceil(diff / (1000 * 3600 * 24));
+    }
+
+    /**
+     * Gets the change in weight from the most recently logged weight
+     * to the least recently logged weight (within numberOfDays).
+     * **/
+    getWeightFluctuation(numberOfDays : number = 7) {
+        let weights = [];
+        for (let i = 0; i <= numberOfDays; i++) {
+            try {
+                let day = this.getFitnessDayFromDate(this.getDate(-1 * i))
+                weights.push(day.getCurrentWeight());
+            } catch { }
+        }
+        return weights[0] - weights[weights.length - 1];
+    }
+
+    logWeight(weight : number, date : Date = new Date()) {
+        for (let i in this.calendar) {
+            let day = this.calendar[i];
+            if (day.getDate().toLocaleDateString() == this.getDateStringInThisTimezone(date)) {
+                day.setCurrentWeight(weight);
+            };
+        }
+        this.setCurrentWeight(this.findCurrentWeight());
+        this.repopulateNextWeek();
+    }
+
+    addCalories(calories: number, date : Date = new Date()) {
+        let day = this.getFitnessDayFromDate(date);
+        day.addCalories(calories);
+    }
+
+    private calculateBMR(weight: number) {
+        return weight * 15;
     }
 
     private getCalorieNeeds() {
@@ -90,12 +143,6 @@ class FitnessCalendar {
         let poundsNeeded = this.goalWeight - this.currentWeight;
         let calorie_delta = (poundsNeeded * caloriesPerPound) / this.daysLeftForGoal()
         return Math.ceil(this.calculateBMR(this.currentWeight) + calorie_delta);
-    }
-
-    getDate(numberDays : number) {
-        let today = new Date();
-        today.setHours(0, 0, 0, 0)
-        return new Date(today.getTime() + numberDays * (24 * 60 * 60 * 1000));
     }
 
     private getNextWeek() {
@@ -133,37 +180,6 @@ class FitnessCalendar {
             day.setCalorieGoal(self.getCalorieNeeds());
         });
         this.sortCalendar();
-    }
-
-    logWeight(weight : number, date : Date = new Date()) {
-        for (let i in this.calendar) {
-            let day = this.calendar[i];
-            if (day.getDate().toLocaleDateString() == this.getDateStringInThisTimezone(date)) {
-                day.setCurrentWeight(weight);
-            };
-        }
-        this.setCurrentWeight(this.findCurrentWeight());
-        this.repopulateNextWeek();
-    }
-
-    addCalories(calories: number, date : Date = new Date()) {
-        let day = this.getFitnessDayFromDate(date);
-        day.addCalories(calories);
-    }
-
-    /**
-     * Gets the change in weight from the most recently logged weight
-     * to the least recently logged weight (within numberOfDays).
-     * **/
-    getWeightFluctuation(numberOfDays : number = 7) {
-        let weights = [];
-        for (let i = 0; i <= numberOfDays; i++) {
-            try {
-                let day = this.getFitnessDayFromDate(this.getDate(-1 * i))
-                weights.push(day.getCurrentWeight());
-            } catch { }
-        }
-        return weights[0] - weights[weights.length - 1];
     }
 }
 
