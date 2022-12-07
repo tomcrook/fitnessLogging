@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var FitnessDay_1 = require("./FitnessDay");
+var tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 var caloriesPerPound = 3500;
 /** Responsible for dynamically updating FitnessDays. **/
 var FitnessCalendar = /** @class */ (function () {
@@ -35,10 +36,13 @@ var FitnessCalendar = /** @class */ (function () {
         }
         return weight;
     };
+    FitnessCalendar.prototype.getDateStringInThisTimezone = function (date) {
+        return date.toLocaleDateString('en-US', { timeZone: tz });
+    };
     FitnessCalendar.prototype.getFitnessDayFromDate = function (date) {
         for (var i in this.calendar) {
             var day = this.calendar[i];
-            if (day.getDate().toDateString() == date.toDateString()) {
+            if (day.getDate().toLocaleDateString() == this.getDateStringInThisTimezone(date)) {
                 return day;
             }
         }
@@ -70,7 +74,9 @@ var FitnessCalendar = /** @class */ (function () {
         return Math.ceil(this.calculateBMR(this.currentWeight) + calorie_delta);
     };
     FitnessCalendar.prototype.getDate = function (numberDays) {
-        return new Date(new Date().getTime() + numberDays * (24 * 60 * 60 * 1000));
+        var today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return new Date(today.getTime() + numberDays * (24 * 60 * 60 * 1000));
     };
     FitnessCalendar.prototype.getNextWeek = function () {
         var dates = [];
@@ -82,7 +88,7 @@ var FitnessCalendar = /** @class */ (function () {
     FitnessCalendar.prototype.hasBeenPopulated = function (date) {
         for (var i in this.calendar) {
             var day = this.calendar[i];
-            if (day.getDate().toDateString() == date.toDateString()) {
+            if (day.getDate().toLocaleDateString() == this.getDateStringInThisTimezone(date)) {
                 return true;
             }
         }
@@ -109,7 +115,7 @@ var FitnessCalendar = /** @class */ (function () {
         if (date === void 0) { date = new Date(); }
         for (var i in this.calendar) {
             var day = this.calendar[i];
-            if (day.getDate().toDateString() == date.toDateString()) {
+            if (day.getDate().toLocaleDateString() == this.getDateStringInThisTimezone(date)) {
                 day.setCurrentWeight(weight);
             }
             ;

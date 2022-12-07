@@ -1,6 +1,6 @@
 import FitnessDay from "./FitnessDay";
 
-
+const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
 const caloriesPerPound = 3500;
 /** Responsible for dynamically updating FitnessDays. **/
 class FitnessCalendar {
@@ -46,10 +46,15 @@ class FitnessCalendar {
         return weight
     }
 
+    private getDateStringInThisTimezone(date : Date) {
+        return date.toLocaleDateString('en-US', {timeZone: tz})
+    }
+
+
     getFitnessDayFromDate(date : Date) {
         for (let i in this.calendar) {
             let day = this.calendar[i];
-            if (day.getDate().toDateString() == date.toDateString()) {
+            if (day.getDate().toLocaleDateString() == this.getDateStringInThisTimezone(date)) {
                 return day;
             }
         }
@@ -88,7 +93,9 @@ class FitnessCalendar {
     }
 
     getDate(numberDays : number) {
-        return new Date(new Date().getTime() + numberDays * (24 * 60 * 60 * 1000));
+        let today = new Date();
+        today.setHours(0, 0, 0, 0)
+        return new Date(today.getTime() + numberDays * (24 * 60 * 60 * 1000));
     }
 
     private getNextWeek() {
@@ -102,7 +109,7 @@ class FitnessCalendar {
     private hasBeenPopulated(date : Date) {
         for (let i in this.calendar) {
             let day = this.calendar[i];
-            if (day.getDate().toDateString() == date.toDateString()) {
+            if (day.getDate().toLocaleDateString() == this.getDateStringInThisTimezone(date)) {
                 return true;
             }
         }
@@ -131,7 +138,7 @@ class FitnessCalendar {
     logWeight(weight : number, date : Date = new Date()) {
         for (let i in this.calendar) {
             let day = this.calendar[i];
-            if (day.getDate().toDateString() == date.toDateString()) {
+            if (day.getDate().toLocaleDateString() == this.getDateStringInThisTimezone(date)) {
                 day.setCurrentWeight(weight);
             };
         }
